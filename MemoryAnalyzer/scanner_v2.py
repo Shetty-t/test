@@ -24,22 +24,50 @@ def load_file_data(filepath):
     try:
         ext = Path(filepath).suffix.lower()
         
+        # Check for binary/executable files
+        if ext in ['.exe', '.dll', '.bin', '.o', '.so', '.dylib']:
+            print(f"[!] Error: Binary executable files cannot be scanned.")
+            print(f"[!] Please provide a CSV file with extracted memory features instead.")
+            return None
+        
         if ext == '.csv':
-            return pd.read_csv(filepath)
+            try:
+                return pd.read_csv(filepath, encoding='utf-8')
+            except UnicodeDecodeError:
+                try:
+                    return pd.read_csv(filepath, encoding='latin-1')
+                except:
+                    print(f"[!] Error: File encoding not supported. Use UTF-8 or Latin-1 encoded CSV.")
+                    return None
         elif ext == '.json':
-            with open(filepath, 'r') as f:
-                data = json.load(f)
-                if isinstance(data, list):
-                    return pd.DataFrame(data)
-                else:
-                    return pd.DataFrame([data])
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        return pd.DataFrame(data)
+                    else:
+                        return pd.DataFrame([data])
+            except UnicodeDecodeError:
+                print(f"[!] Error: JSON file encoding not supported.")
+                return None
         elif ext in ['.xlsx', '.xls']:
-            return pd.read_excel(filepath)
+            try:
+                return pd.read_excel(filepath)
+            except Exception as e:
+                print(f"[!] Error: Excel file format error: {str(e)}")
+                return None
         elif ext == '.txt':
-            # Try to parse as CSV
-            return pd.read_csv(filepath, sep=r'\s+|,|\t')
+            try:
+                return pd.read_csv(filepath, sep=r'\s+|,|\t', encoding='utf-8')
+            except UnicodeDecodeError:
+                try:
+                    return pd.read_csv(filepath, sep=r'\s+|,|\t', encoding='latin-1')
+                except:
+                    print(f"[!] Error: File encoding not supported.")
+                    return None
         else:
             print(f"[!] Unsupported file format: {ext}")
+            print(f"[!] Supported formats: CSV, JSON, Excel (.xlsx, .xls), TXT")
             return None
     except Exception as e:
         print(f"[!] Error reading file: {e}")
